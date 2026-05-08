@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isVerifiedUser() { return request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'phone'; }
+
+    // Validation Blueprint for UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'name', 'phoneNumber']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.phoneNumber is string && data.phoneNumber.size() <= 20;
+    }
+
+    // Validation Blueprint for Ledger
+    function isValidLedger(data) {
+      return data.keys().hasAll(['ownerId', 'buyerName', 'totalDue', 'totalPaid']) &&
+             data.ownerId == request.auth.uid &&
+             data.buyerName is string && data.buyerName.size() <= 100 &&
+             data.totalDue is number && data.totalPaid is number;
+    }
+
+    // Validation Blueprint for Transaction
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'type', 'amount', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.type in ['SALE', 'EXPENSE'] &&
+             data.amount is number &&
+             data.timestamp == request.time;
+    }
+
+    // Validation Blueprint for Challan
+    function isValidChallan(data) {
+      return data.keys().hasAll(['userId', 'buyerId', 'truckNumber', 'challanNumber', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.truckNumber is string && data.truckNumber.size() <= 50;
+    }
+
+    // USER PROFILE RULES
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isSignedIn() && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'businessName', 'businessCategory', 'location', 'nidNumber', 'trustScore', 'isVerified']);
+    }
+
+    // LEDGER RULES
+    match /ledgers/{ledgerId} {
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidLedger(incoming());
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid && isValidLedger(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['buyerName', 'buyerPhone', 'totalDue', 'totalPaid', 'lastPaymentDate', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // TRANSACTION RULES
+    match /transactions/{transactionId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidTransaction(incoming());
+      allow update: if false; // Transactions are immutable once logged for audit
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // CHALLAN RULES
+    match /challans/{challanId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidChallan(incoming());
+      allow update: if false; // Challans are deterministic audit documents
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

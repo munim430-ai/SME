@@ -1,0 +1,13 @@
+{
+  "name": "Keystone SME: Rural Operating System",
+  "description": "A production-ready MVP for a rural SME OS and Alternative Credit Scoring platform. Features include e-KYC with NID scan, digital ledger (Khata), OCR receipt scanning, and deterministic challan generation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "AI-powered OCR",
+    "Digital Ledger",
+    "Credit Scoring"
+  ]
+}

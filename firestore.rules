@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // Validation Blueprint for UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'name', 'phoneNumber']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() <= 100 &&
+             data.phoneNumber is string && data.phoneNumber.size() <= 100;
+    }
+
+    // Validation Blueprint for Ledger
+    function isValidLedger(data) {
+      return data.keys().hasAll(['ownerId', 'buyerName', 'totalDue', 'totalPaid']) &&
+             data.ownerId == request.auth.uid &&
+             data.buyerName is string && data.buyerName.size() <= 100;
+    }
+
+    // Validation Blueprint for Transaction
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'type', 'amount', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.type in ['SALE', 'EXPENSE'] &&
+             data.amount is number &&
+             (data.timestamp == request.time || data.timestamp is string);
+    }
+
+    // Validation Blueprint for Challan
+    function isValidChallan(data) {
+      return data.keys().hasAll(['userId', 'buyerId', 'truckNumber', 'challanNumber', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.truckNumber is string && data.truckNumber.size() <= 50;
+    }
+
+    function isValidInventoryItem(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'quantity', 'unit']) &&
+             data.ownerId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100;
+    }
+
+    function isValidVendor(data) {
+      return data.keys().hasAll(['ownerId', 'name', 'phone']) &&
+             data.ownerId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100;
+    }
+
+    function isValidPurchaseOrder(data) {
+      return data.keys().hasAll(['ownerId', 'supplierName', 'items', 'totalAmount', 'status', 'orderDate']) &&
+             data.ownerId == request.auth.uid;
+    }
+
+    // Test Connection Rule
+    match /test/connection {
+      allow read: if isSignedIn();
+    }
+
+    // USER PROFILE RULES
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId);
+      allow create: if isSignedIn() && isValidUserProfile(incoming());
+      allow update: if isSignedIn() && (request.auth.uid == userId) && isValidUserProfile(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'businessName', 'businessCategory', 'location', 'nidNumber', 'trustScore', 'isVerified', 'onboarded', 'uid', 'phoneNumber', 'createdAt', 'photoURL', 'updatedAt']);
+    }
+
+    // LEDGER RULES
+    match /ledgers/{ledgerId} {
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidLedger(incoming());
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid && isValidLedger(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['buyerName', 'buyerPhone', 'totalDue', 'totalPaid', 'lastPaymentDate', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // TRANSACTION RULES
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidTransaction(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidTransaction(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['amount', 'description', 'isBaki', 'category', 'ledgerId', 'receiptUrl', 'metadata', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // CHALLAN RULES
+    match /challans/{challanId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidChallan(incoming());
+      allow update: if false; 
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // INVENTORY RULES
+    match /inventory/{itemId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidInventoryItem(incoming());
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid && isValidInventoryItem(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'quantity', 'unit', 'category', 'minStock', 'vendorId', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // VENDOR RULES
+    match /vendors/{vendorId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidVendor(incoming());
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid && isValidVendor(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'category', 'address', 'email', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // PURCHASE ORDER RULES
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidPurchaseOrder(incoming());
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid && isValidPurchaseOrder(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'expectedDelivery', 'totalAmount', 'items', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // PRODUCTION LOG RULES
+    match /production_logs/{logId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // STOCK AUDIT RULES
+    match /stock_audits/{auditId} {
+      allow read: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && incoming().ownerId == request.auth.uid;
+      allow update: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+  }
+}

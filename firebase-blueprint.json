@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores SME owner details and business information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "businessName": { "type": "string" },
+        "businessCategory": { "type": "string", "enum": ["Poultry", "Agro", "Dairy", "Other"] },
+        "location": { "type": "string" },
+        "nidNumber": { "type": "string" },
+        "trustScore": { "type": "integer" },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "phoneNumber"]
+    },
+    "Ledger": {
+      "title": "Digital Ledger (Khata)",
+      "description": "Logs B2B credit sales and buyer relationships.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "buyerPhone": { "type": "string" },
+        "totalDue": { "type": "number" },
+        "totalPaid": { "type": "number" },
+        "lastPaymentDate": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "buyerName", "totalDue", "totalPaid"]
+    },
+    "Transaction": {
+      "title": "Transaction Record",
+      "description": "Individual sales or expenses logged by the user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "ledgerId": { "type": "string" },
+        "type": { "type": "string", "enum": ["SALE", "EXPENSE"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "isBaki": { "type": "boolean" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "recurrence": { "type": "string", "enum": ["NONE", "DAILY", "WEEKLY", "MONTHLY"] },
+        "lastRecurringGeneration": { "type": "string", "format": "date-time" },
+        "receiptUrl": { "type": "string" },
+        "metadata": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "amount", "timestamp"]
+    },
+    "Challan": {
+      "title": "Logistics Challan",
+      "description": "Deterministic document for poultry/agro logistics.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "truckNumber": { "type": "string" },
+        "driverName": { "type": "string" },
+        "itemWeight": { "type": "number" },
+        "unit": { "type": "string" },
+        "challanNumber": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "buyerId", "truckNumber", "challanNumber", "timestamp"]
+    },
+    "Vendor": {
+      "title": "Supply Chain Vendor",
+      "description": "Business details for suppliers and partners.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "category": { "type": "string" },
+        "address": { "type": "string" },
+        "email": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "phone"]
+    },
+    "InventoryItem": {
+      "title": "Stock Inventory",
+      "description": "Monitors feed, medicine, and chick stock levels.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["FEED", "MEDICINE", "CHICKS", "EQUIPMENT", "OTHER"] },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "minStock": { "type": "number" },
+        "vendorId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "name", "quantity", "unit"]
+    },
+    "PurchaseOrder": {
+      "title": "Procurement Order",
+      "description": "Purchase orders for farm supplies.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "supplierName": { "type": "string" },
+        "vendorId": { "type": "string" },
+        "items": { 
+          "type": "array",
+          "items": {
+             "type": "object",
+             "properties": {
+               "name": { "type": "string" },
+               "quantity": { "type": "number" },
+               "price": { "type": "number" }
+             }
+          }
+        },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "RECEIVED", "CANCELLED"] },
+        "orderDate": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "supplierName", "items", "totalAmount"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profiles."
+    },
+    "ledgers/{ledgerId}": {
+      "schema": "Ledger",
+      "description": "Buyer ledger entries."
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "History of sales and expenses."
+    },
+    "challans/{challanId}": {
+      "schema": "Challan",
+      "description": "Generated challans for logistics proof."
+    },
+    "inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "Farm stock records."
+    },
+    "vendors/{vendorId}": {
+      "schema": "Vendor",
+      "description": "Supplier database."
+    },
+    "orders/{orderId}": {
+      "schema": "PurchaseOrder",
+      "description": "Procurement history."
+    },
+    "production_logs/{logId}": {
+      "schema": "ProductionLog",
+      "description": "Daily farm production data."
+    },
+    "stock_audits/{auditId}": {
+      "schema": "StockAudit",
+      "description": "Inventory verification records."
+    }
+  }
+}
