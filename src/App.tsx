@@ -30,14 +30,9 @@ import ChallanGenerator from './components/views/ChallanGenerator';
 import ExploreView from './components/views/ExploreView';
 import ProfileView from './components/views/ProfileView';
 import TransactionsView from './components/views/TransactionsView';
-import ManagementView from './components/views/ManagementView';
 import ReportGenerationView from './components/views/ReportGenerationView';
 import ServicesView from './components/views/ServicesView';
 import LoanPredictorView from './components/views/LoanPredictorView';
-import AgroGuideView from './components/views/AgroGuideView';
-import ProductionLogView from './components/views/ProductionLogView';
-import StockAuditView from './components/views/StockAuditView';
-import VoiceAssistantView from './components/views/VoiceAssistantView';
 import SettingsView from './components/views/SettingsView';
 import { collection, query, where, getDocs, onSnapshot, orderBy } from 'firebase/firestore';
 
@@ -220,7 +215,6 @@ export default function App() {
       case 'login': return <LoginView setLanguage={(l) => setLang(l)} lang={lang} darkMode={darkMode} />;
       case 'nid': return <NidScanner onComplete={() => setCurrentView('onboarding')} lang={lang} darkMode={darkMode} />;
       case 'onboarding': return <Onboarding onComplete={() => setCurrentView('dashboard')} lang={lang} darkMode={darkMode} />;
-      case 'voice_assistant': return <VoiceAssistantView setView={setCurrentView} profile={profile} lang={lang} darkMode={darkMode} />;
       case 'settings': return <SettingsView setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} setDarkMode={setDarkMode} setLang={setLang} pushNotificationsEnabled={pushNotificationsEnabled} setPushNotificationsEnabled={setPushNotificationsEnabled} />;
       case 'khata': return <KhataView setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} />;
       case 'receipt': return <ReceiptScanner setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} />;
@@ -228,13 +222,9 @@ export default function App() {
       case 'rates': return <ExploreView setView={setCurrentView} lang={lang} darkMode={darkMode} />;
       case 'profile': return <ProfileView setView={setCurrentView} profile={profile} lang={lang} darkMode={darkMode} />;
       case 'transactions': return <TransactionsView setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} />;
-      case 'management': return <ManagementView setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} />;
       case 'reports': return <ReportGenerationView setView={setCurrentView} lang={lang} transactions={transactions} darkMode={darkMode} />;
       case 'services': return <ServicesView setView={setCurrentView} lang={lang} darkMode={darkMode} />;
       case 'loan_predictor': return <LoanPredictorView setView={setCurrentView} lang={lang} transactions={transactions} profile={profile} darkMode={darkMode} />;
-      case 'agro_guide': return <AgroGuideView setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} />;
-      case 'production_log': return <ProductionLogView setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} />;
-      case 'stock_audit': return <StockAuditView setView={setCurrentView} lang={lang} profile={profile} darkMode={darkMode} />;
       default: return <Dashboard setView={setCurrentView} profile={profile} lang={lang} transactions={transactions} darkMode={darkMode} />;
     }
   };
